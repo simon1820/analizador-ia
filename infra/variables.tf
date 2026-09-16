@@ -56,9 +56,9 @@ variable "ia_proveedor" {
 }
 
 variable "ia_modelo" {
-  description = "Modelo a usar. Vacío = el predeterminado del proveedor (claude-opus-5 en Anthropic, anthropic.claude-opus-4-8 en Bedrock)."
+  description = "Modelo a usar. Vacío = el predeterminado del proveedor (claude-sonnet-5 en Anthropic, anthropic.claude-sonnet-5 en Bedrock)."
   type        = string
-  default     = ""
+  default     = "claude-sonnet-5"
 }
 
 variable "anthropic_workspace_id" {

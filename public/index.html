@@ -3,234 +3,102 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
 <title>Analizador de reseñas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --ink:#14171c; --paper:#faf9f5; --rule:#dfddd4; --muted:#6b6f76;
-    --signal:#1f8f6a; --alerta:#c05a24; --neutro:#8a8f98;
-    --mono:"IBM Plex Mono",ui-monospace,monospace;
-    --sans:"IBM Plex Sans",system-ui,sans-serif;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.6;
-       -webkit-font-smoothing:antialiased}
-  .envoltura{max-width:660px;margin:0 auto;padding:40px 24px 64px}
-  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;
-           color:var(--muted);margin:0 0 6px}
-  h1{font-family:var(--mono);font-weight:500;font-size:26px;letter-spacing:-.01em;margin:0 0 8px}
-  .intro{color:var(--muted);margin:0 0 32px;font-size:15px}
-
-  .placa{background:var(--ink);color:#f2f1ec;border-radius:4px;padding:20px 22px;margin-bottom:32px}
-  .placa-cab{display:flex;align-items:center;gap:9px;margin-bottom:16px}
-  .led{width:9px;height:9px;border-radius:50%;background:var(--signal);flex:none}
-  .led.caida{background:var(--alerta)}
-  .placa-cab span{font-family:var(--mono);font-size:11px;letter-spacing:.14em;
-                  text-transform:uppercase;color:#8f938c}
-  .rejilla{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px 20px;margin:0}
-  .dato dt{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
-           color:#8f938c;margin:0 0 3px}
-  .dato dd{font-family:var(--mono);font-size:15px;margin:0;word-break:break-all}
-
-  label{display:block;font-family:var(--mono);font-size:12px;letter-spacing:.1em;
-        text-transform:uppercase;color:var(--muted);margin-bottom:8px}
-  textarea{width:100%;min-height:120px;padding:14px;border:1px solid var(--rule);border-radius:4px;
-           background:#fff;font-family:var(--sans);font-size:15px;color:var(--ink);resize:vertical}
-  textarea:focus-visible,button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
-  .barra{display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap}
-  button{font-family:var(--mono);font-size:13px;padding:10px 18px;border-radius:4px;cursor:pointer;
-         border:1px solid var(--ink);background:var(--ink);color:var(--paper)}
-  button.secundario{background:transparent;color:var(--ink)}
-  button.enlace{border:0;background:none;padding:0;color:var(--muted);text-decoration:underline;font-size:12px}
-  button:disabled{opacity:.45;cursor:not-allowed}
-  .error{color:var(--alerta);font-size:14px;margin:10px 0 0}
-  .oculto{display:none}
-  hr{border:0;border-top:1px solid var(--rule);margin:36px 0}
-
-  /* Resultado del análisis */
-  .resultado{margin-top:24px;border:1px solid var(--rule);border-radius:4px;background:#fff;overflow:hidden}
-  .resultado-cab{display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid var(--rule);
-                 flex-wrap:wrap}
-  .pastilla{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
-            padding:5px 10px;border-radius:999px;color:#fff;background:var(--neutro)}
-  .pastilla.positivo{background:var(--signal)}
-  .pastilla.negativo{background:var(--alerta)}
-  .estrellas{font-family:var(--mono);font-size:15px;letter-spacing:.1em}
-  .estrellas span{color:var(--rule)}
-  .estrellas span.llena{color:var(--ink)}
-  .urgencia{margin-left:auto;font-family:var(--mono);font-size:11px;letter-spacing:.1em;
-            text-transform:uppercase;color:var(--muted)}
-  .urgencia.alta{color:var(--alerta)}
-  .resultado-cuerpo{padding:18px 20px;display:grid;gap:18px}
-  .campo h3{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
-            color:var(--muted);margin:0 0 6px;font-weight:500}
-  .campo p{margin:0;font-size:15px}
-  .temas{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
-  .temas li{font-family:var(--mono);font-size:12px;padding:4px 10px;border:1px solid var(--rule);
-            border-radius:999px;background:var(--paper)}
-  .respuesta{border-left:3px solid var(--ink);padding:10px 14px;background:var(--paper);white-space:pre-wrap}
-  .pie{display:flex;gap:16px;flex-wrap:wrap;padding:12px 20px;border-top:1px solid var(--rule);
-       font-family:var(--mono);font-size:11px;color:var(--muted)}
-</style>
+<link rel="stylesheet" href="/estilos.css">
 </head>
 <body>
-<div class="envoltura">
-  <p class="eyebrow">Fase 2 · inteligencia artificial</p>
-  <h1>Analizador de reseñas</h1>
-  <p class="intro">Pega el texto de un cliente y Claude, a través de Amazon Bedrock, devuelve sentimiento, temas, urgencia y una respuesta sugerida. Cada resultado lleva la firma del servidor que lo atendió.</p>
+<main class="envoltura">
+  <header class="cabecera">
+    <p class="eyebrow">Fase 2 · inteligencia artificial</p>
+    <h1>Analizador de reseñas</h1>
+    <p class="intro">Pega el texto de un cliente y el modelo devuelve sentimiento, temas, urgencia y una respuesta sugerida. Cada resultado lleva la firma del servidor que lo atendió.</p>
+  </header>
 
-  <div class="placa">
-    <div class="placa-cab"><i class="led" id="led"></i><span id="estado">Consultando</span></div>
+  <section class="placa" aria-label="Servidor que atiende esta página">
+    <div class="placa-cab">
+      <i class="led" id="led" aria-hidden="true"></i>
+      <span id="estado">Consultando</span>
+      <button id="refrescar" class="placa-boton" type="button" title="Volver a consultar qué instancia responde">Refrescar</button>
+    </div>
     <dl class="rejilla">
       <div class="dato"><dt>Instancia</dt><dd id="instancia">—</dd></div>
       <div class="dato"><dt>Zona</dt><dd id="zona">—</dd></div>
       <div class="dato"><dt>Tipo</dt><dd id="tipo">—</dd></div>
       <div class="dato"><dt>Modelo</dt><dd id="modelo">—</dd></div>
     </dl>
-  </div>
+  </section>
 
-  <label for="texto">Texto a analizar</label>
-  <textarea id="texto" placeholder="Pega aquí una reseña, un ticket de soporte o un correo."></textarea>
-  <div class="barra">
-    <button id="analizar">Analizar</button>
-    <button id="refrescar" class="secundario">Refrescar identidad</button>
-    <button id="ejemplo" class="enlace" type="button">Cargar un ejemplo</button>
-  </div>
-  <p class="error oculto" id="error"></p>
+  <form id="formulario" class="formulario" novalidate>
+    <div class="campo-cab">
+      <label for="texto">Texto a analizar</label>
+      <span class="contador" id="contador" aria-live="polite">0 / 8000</span>
+    </div>
+    <textarea id="texto" name="texto" rows="6" spellcheck="true"
+      placeholder="Pega aquí una reseña, un ticket de soporte o un correo."></textarea>
+    <div class="ejemplos" role="group" aria-label="Cargar un texto de ejemplo">
+      <span class="ejemplos-etiqueta">Ejemplos</span>
+      <button type="button" class="chip" data-ejemplo="negativo">Cafetera que gotea</button>
+      <button type="button" class="chip" data-ejemplo="neutral">Consulta de factura</button>
+      <button type="button" class="chip" data-ejemplo="positivo">Reseña de hotel</button>
+    </div>
+    <div class="barra">
+      <button type="submit" id="analizar" class="principal">Analizar</button>
+      <button type="button" id="limpiar" class="secundario">Limpiar</button>
+      <span class="atajo">Ctrl + Enter también analiza</span>
+    </div>
+    <p class="error oculto" id="error" role="alert"></p>
+  </form>
 
-  <section class="resultado oculto" id="resultado" aria-live="polite">
+  <section class="resultado oculto" id="resultado" aria-live="polite" aria-busy="false">
     <div class="resultado-cab">
       <span class="pastilla" id="sentimiento">neutral</span>
-      <span class="estrellas" id="estrellas" aria-label="Puntuación"></span>
+      <span class="estrellas" id="estrellas" role="img" aria-label="Puntuación"></span>
       <span class="urgencia" id="urgencia"></span>
     </div>
     <div class="resultado-cuerpo">
-      <div class="campo"><h3>Resumen</h3><p id="resumen"></p></div>
-      <div class="campo"><h3>Temas</h3><ul class="temas" id="temas"></ul></div>
-      <div class="campo"><h3>Respuesta sugerida</h3><p class="respuesta" id="respuesta"></p></div>
+      <div class="campo">
+        <h2>Resumen</h2>
+        <p id="resumen"></p>
+      </div>
+      <div class="campo">
+        <h2>Temas</h2>
+        <ul class="temas" id="temas"></ul>
+      </div>
+      <div class="campo">
+        <div class="campo-cab">
+          <h2>Respuesta sugerida</h2>
+          <button type="button" id="copiar" class="enlace">Copiar</button>
+        </div>
+        <p class="respuesta" id="respuesta"></p>
+      </div>
     </div>
-    <div class="pie">
+    <footer class="pie">
       <span id="pie-instancia"></span>
+      <span id="pie-modelo"></span>
       <span id="pie-tiempo"></span>
       <span id="pie-tokens"></span>
-    </div>
+    </footer>
   </section>
 
-  <hr>
-  <p class="eyebrow">Prueba de balanceo</p>
-  <p class="intro" style="margin-bottom:14px">Apaga el health check de esta instancia y el balanceador dejará de enviarle tráfico en unos segundos.</p>
-  <button id="alternar" class="secundario">Apagar health check</button>
-</div>
+  <section class="historial oculto" id="historial" aria-label="Análisis anteriores">
+    <div class="campo-cab">
+      <h2>Anteriores en este navegador</h2>
+      <button type="button" id="borrar-historial" class="enlace">Borrar</button>
+    </div>
+    <ol class="historial-lista" id="historial-lista"></ol>
+  </section>
 
-<script type="module">
-  const $ = (id) => document.getElementById(id);
-  let saludable = true;
+  <details class="demo">
+    <summary>Herramientas de la demo de balanceo</summary>
+    <p class="intro">Apaga el health check de esta instancia y el balanceador dejará de enviarle tráfico en unos segundos. Recarga la página y verás que te atiende otra.</p>
+    <button type="button" id="alternar" class="secundario">Apagar health check</button>
+  </details>
+</main>
 
-  const EJEMPLO = "Compré la cafetera hace dos semanas y el primer día funcionó bien, pero desde el jueves gotea por la base y ya manchó la encimera. Escribí al chat de soporte el viernes y nadie me ha contestado. Quiero que me la cambien o me devuelvan el dinero antes de que termine el mes, porque la necesito para el negocio.";
-
-  function pintarIdentidad(d) {
-    $("instancia").textContent = d.instanceId;
-    $("zona").textContent = d.availabilityZone;
-    $("tipo").textContent = d.instanceType;
-    $("modelo").textContent = d.modelo ?? "—";
-    saludable = d.saludable;
-    $("led").classList.toggle("caida", !saludable);
-    $("estado").textContent = saludable ? "Health check en 200" : "Health check en 503";
-    $("alternar").textContent = saludable ? "Apagar health check" : "Encender health check";
-  }
-
-  function mostrarError(msg) {
-    $("error").textContent = msg;
-    $("error").classList.remove("oculto");
-  }
-  function limpiarError() { $("error").classList.add("oculto"); }
-
-  function pintarResultado(d) {
-    const p = $("sentimiento");
-    p.textContent = d.sentimiento;
-    p.className = `pastilla ${d.sentimiento}`;
-
-    $("estrellas").innerHTML = "";
-    for (let i = 1; i <= 5; i++) {
-      const s = document.createElement("span");
-      s.textContent = "★";
-      if (i <= d.puntuacion) s.classList.add("llena");
-      $("estrellas").appendChild(s);
-    }
-    $("estrellas").setAttribute("aria-label", `Puntuación ${d.puntuacion} de 5`);
-
-    const u = $("urgencia");
-    u.textContent = `urgencia ${d.urgencia}`;
-    u.className = `urgencia ${d.urgencia}`;
-
-    $("resumen").textContent = d.resumen;
-    $("temas").innerHTML = "";
-    for (const t of d.temas) {
-      const li = document.createElement("li");
-      li.textContent = t;
-      $("temas").appendChild(li);
-    }
-    $("respuesta").textContent = d.respuesta_sugerida;
-
-    $("pie-instancia").textContent = `atendido por ${d.atendidoPor}`;
-    $("pie-tiempo").textContent = `${(d.milisegundos / 1000).toFixed(1)} s`;
-    $("pie-tokens").textContent = `${d.tokens.entrada} tokens de entrada · ${d.tokens.salida} de salida`;
-    $("resultado").classList.remove("oculto");
-  }
-
-  async function cargarIdentidad() {
-    try {
-      pintarIdentidad(await (await fetch("/api/identidad")).json());
-    } catch {
-      $("estado").textContent = "Sin respuesta del servidor";
-      $("led").classList.add("caida");
-    }
-  }
-
-  $("analizar").addEventListener("click", async () => {
-    const texto = $("texto").value.trim();
-    if (!texto) { mostrarError("Escribe un texto antes de analizar."); $("texto").focus(); return; }
-    limpiarError();
-    $("analizar").disabled = true;
-    $("analizar").textContent = "Analizando";
-    try {
-      const res = await fetch("/api/analizar", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ texto }),
-      });
-      const datos = await res.json();
-      if (!res.ok) {
-        mostrarError(datos.error ?? `El servidor respondió ${res.status}.`);
-        $("resultado").classList.add("oculto");
-      } else {
-        pintarResultado(datos);
-      }
-      cargarIdentidad();
-    } catch {
-      mostrarError("No se pudo contactar al servidor. Revisa que el proceso siga corriendo.");
-    } finally {
-      $("analizar").disabled = false;
-      $("analizar").textContent = "Analizar";
-    }
-  });
-
-  $("texto").addEventListener("input", limpiarError);
-  $("refrescar").addEventListener("click", cargarIdentidad);
-  $("ejemplo").addEventListener("click", () => { $("texto").value = EJEMPLO; limpiarError(); $("texto").focus(); });
-
-  $("alternar").addEventListener("click", async () => {
-    await fetch("/api/salud", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ activa: !saludable }),
-    });
-    cargarIdentidad();
-  });
-
-  cargarIdentidad();
-</script>
+<script type="module" src="/app.js"></script>
 </body>
 </html>

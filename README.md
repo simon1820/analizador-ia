@@ -65,8 +65,8 @@ Los pasos concretos están en [infra/README.md](infra/README.md).
 
 ```bash
 pnpm install
-pnpm run build
-pnpm start
+pnpm run dev      # recarga sola al guardar
+pnpm run build && pnpm start   # como en producción
 ```
 
 La app queda en `http://localhost:3000`. Sin metadatos de EC2 se identifica
@@ -78,8 +78,13 @@ credenciales del perfil de AWS CLI activo (`AWS_PROFILE`) y la región de
 
 | Ruta | Contenido |
 |---|---|
-| `src/server.ts` | Servidor Express: identidad IMDSv2, health check, análisis con Bedrock |
-| `public/index.html` | Interfaz: identidad de la instancia, formulario y tarjeta de resultado |
+| `src/server.ts` | Arranque: arma el estado, monta rutas, apagado limpio con SIGTERM |
+| `src/config.ts` | Toda la configuración leída del entorno, en un solo sitio |
+| `src/identidad.ts` | Lectura de la identidad de la instancia por IMDSv2 |
+| `src/ia/cliente.ts` | Construcción del cliente de Claude según proveedor (Bedrock o API de Anthropic) |
+| `src/ia/analisis.ts` | Prompt, esquema de la herramienta, validación y traducción de errores |
+| `src/rutas.ts` | Rutas HTTP: health check, identidad, interruptor de salud, análisis |
+| `public/` | Interfaz estática servida tal cual: `index.html`, `estilos.css`, `app.js` |
 | `infra/` | Terraform: red, balanceador, Auto Scaling, IAM, OIDC para GitHub |
 | `.github/workflows/terraform.yml` | Plan en pull requests, apply en `main` |
 | `docs/arquitectura.svg` | Diagrama de la arquitectura |
