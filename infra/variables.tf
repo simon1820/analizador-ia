@@ -50,3 +50,18 @@ variable "github_repo" {
   type        = string
   default     = "simon1820/analizador-ia"
 }
+
+# GitHub incluye los IDs numéricos en el claim `sub` del token OIDC:
+#   repo:<owner>@<owner_id>/<repo>@<repo_id>:ref:refs/heads/main
+# Se obtienen en https://api.github.com/repos/<owner>/<repo> (campos id y owner.id).
+variable "github_owner_id" {
+  description = "ID numérico del dueño del repo en GitHub."
+  type        = string
+  default     = "124012675"
+}
+
+variable "github_repo_id" {
+  description = "ID numérico del repo en GitHub."
+  type        = string
+  default     = "1337375033"
+}

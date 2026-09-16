@@ -2,6 +2,17 @@
 # como secretos. Sólo el repo indicado, en main o en pull requests.
 locals {
   crear_oidc = var.github_repo != ""
+
+  # Formato actual del claim `sub` (con IDs) y el formato antiguo (sin IDs),
+  # para que el rol funcione con cualquiera de los dos.
+  github_owner = split("/", var.github_repo)[0]
+  github_name  = try(split("/", var.github_repo)[1], "")
+  github_subs = [
+    "repo:${local.github_owner}@${var.github_owner_id}/${local.github_name}@${var.github_repo_id}:ref:refs/heads/main",
+    "repo:${local.github_owner}@${var.github_owner_id}/${local.github_name}@${var.github_repo_id}:pull_request",
+    "repo:${var.github_repo}:ref:refs/heads/main",
+    "repo:${var.github_repo}:pull_request",
+  ]
 }
 
 resource "aws_iam_openid_connect_provider" "github" {
@@ -31,10 +42,7 @@ data "aws_iam_policy_document" "github_asume" {
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values = [
-        "repo:${var.github_repo}:ref:refs/heads/main",
-        "repo:${var.github_repo}:pull_request",
-      ]
+      values   = local.github_subs
     }
   }
 }
