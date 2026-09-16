@@ -2,3 +2,12 @@ node_modules/
 dist/
 *.log
 .env
+
+# Terraform
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.*
+infra/backend.hcl
+infra/*.tfvars
+!infra/*.tfvars.example
+infra/tfplan

@@ -1,7 +1,12 @@
 #!/bin/bash
 set -euxo pipefail
 
-REPO_URL="https://github.com/simon1820/analizador-ia.git"
+# Cambiar app_version obliga a Terraform a crear una versión nueva del
+# launch template y el ASG reemplaza las instancias (instance refresh).
+# app_version: ${app_version}
+
+REPO_URL="${repo_url}"
+GIT_REF="${git_ref}"
 APP_DIR="/opt/analizador-ia"
 
 dnf install -y git
@@ -15,6 +20,7 @@ id -u app &>/dev/null || useradd --system --create-home --shell /sbin/nologin ap
 
 git clone "$REPO_URL" "$APP_DIR"
 cd "$APP_DIR"
+git checkout "$GIT_REF"
 pnpm install --frozen-lockfile
 pnpm run build
 chown -R app:app "$APP_DIR"
@@ -31,6 +37,7 @@ User=app
 WorkingDirectory=/opt/analizador-ia
 Environment=NODE_ENV=production
 Environment=PORT=3000
+Environment=AWS_REGION=${aws_region}
 ExecStart=/usr/bin/node dist/server.js
 Restart=always
 RestartSec=5

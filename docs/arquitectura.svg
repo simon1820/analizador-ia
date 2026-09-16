@@ -1,0 +1,220 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1520 900" width="1520" height="900" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="12" fill="#232F3E">
+  <title>Arquitectura del Analizador de reseñas en AWS, fase 1</title>
+  <desc>Un usuario entra por HTTP al Application Load Balancer, que reparte tráfico a dos instancias EC2 en un Auto Scaling Group repartido en dos zonas. GitHub Actions asume un rol por OIDC y aplica Terraform guardando el estado en S3. Las instancias clonan el repo al arrancar.</desc>
+
+  <defs>
+    <marker id="flecha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#232F3E"/>
+    </marker>
+    <marker id="flecha-gris" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6B7280"/>
+    </marker>
+  </defs>
+
+  <rect width="1520" height="900" fill="#FFFFFF"/>
+
+  <!-- ============ Capa: AWS Cloud ============ -->
+  <rect x="230" y="30" width="980" height="770" fill="none" stroke="#232F3E" stroke-width="1.5"/>
+  <rect x="230" y="30" width="26" height="26" fill="#232F3E"/>
+  <text x="243" y="48" font-size="11" font-weight="700" fill="#FFFFFF" text-anchor="middle">aws</text>
+  <text x="266" y="48" font-size="14" font-weight="700">AWS Cloud</text>
+
+  <!-- ============ Capa: Región ============ -->
+  <rect x="250" y="70" width="940" height="690" fill="none" stroke="#147EBA" stroke-width="1.5" stroke-dasharray="8 5"/>
+  <text x="262" y="92" font-size="13" font-weight="700" fill="#147EBA">Región us-east-1</text>
+  <text x="392" y="92" font-size="11" fill="#5F6B7A">· todo lo que hay dentro lo crea terraform apply (25 recursos)</text>
+
+  <!-- ============ Capa: VPC ============ -->
+  <rect x="290" y="110" width="640" height="570" fill="none" stroke="#8C4FFF" stroke-width="1.5"/>
+  <rect x="290" y="110" width="26" height="26" fill="#8C4FFF"/>
+  <text x="303" y="128" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">VPC</text>
+  <text x="326" y="128" font-size="13" font-weight="700" fill="#8C4FFF">VPC analizador-ia</text>
+  <text x="458" y="128" font-size="11" fill="#5F6B7A">10.0.0.0/16</text>
+
+  <!-- Internet Gateway sobre el borde de la VPC -->
+  <rect x="260" y="372" width="60" height="46" rx="3" fill="#FFFFFF" stroke="#8C4FFF" stroke-width="1.5"/>
+  <text x="290" y="400" font-size="12" font-weight="700" fill="#8C4FFF" text-anchor="middle">IGW</text>
+  <text x="290" y="436" font-size="10" fill="#5F6B7A" text-anchor="middle">Internet Gateway</text>
+
+  <!-- Security group del ALB -->
+  <rect x="475" y="145" width="270" height="100" fill="none" stroke="#DD344C" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <text x="610" y="238" font-size="10.5" fill="#DD344C" text-anchor="middle">SG alb · entrada 80 desde 0.0.0.0/0</text>
+
+  <!-- ALB -->
+  <rect x="490" y="160" width="240" height="64" rx="3" fill="#FFFFFF" stroke="#8C4FFF" stroke-width="1.5"/>
+  <rect x="500" y="170" width="28" height="28" rx="2" fill="#8C4FFF"/>
+  <text x="514" y="189" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">ALB</text>
+  <text x="538" y="182" font-size="13" font-weight="700">Application Load Balancer</text>
+  <text x="538" y="200" font-size="11" fill="#5F6B7A">listener HTTP :80 · público</text>
+  <text x="538" y="215" font-size="11" fill="#5F6B7A">health check /health cada 10 s</text>
+
+  <!-- Zonas de disponibilidad -->
+  <rect x="325" y="270" width="280" height="380" fill="none" stroke="#147EBA" stroke-width="1" stroke-dasharray="4 4"/>
+  <text x="337" y="290" font-size="11.5" font-weight="700" fill="#147EBA">Zona us-east-1a</text>
+  <rect x="635" y="270" width="280" height="380" fill="none" stroke="#147EBA" stroke-width="1" stroke-dasharray="4 4"/>
+  <text x="647" y="290" font-size="11.5" font-weight="700" fill="#147EBA">Zona us-east-1b</text>
+
+  <!-- Subredes públicas -->
+  <rect x="340" y="300" width="250" height="330" fill="#EEF5E4" stroke="#7AA116" stroke-width="1.2"/>
+  <text x="352" y="320" font-size="11.5" font-weight="700" fill="#4F7A0C">Subred pública</text>
+  <text x="352" y="335" font-size="10.5" fill="#5F6B7A">10.0.0.0/24 · IP pública al lanzar</text>
+  <rect x="650" y="300" width="250" height="330" fill="#EEF5E4" stroke="#7AA116" stroke-width="1.2"/>
+  <text x="662" y="320" font-size="11.5" font-weight="700" fill="#4F7A0C">Subred pública</text>
+  <text x="662" y="335" font-size="10.5" fill="#5F6B7A">10.0.1.0/24 · IP pública al lanzar</text>
+
+  <!-- Auto Scaling Group cruzando ambas zonas -->
+  <rect x="345" y="395" width="550" height="210" fill="none" stroke="#ED7100" stroke-width="1.5" stroke-dasharray="7 4"/>
+  <text x="620" y="412" font-size="11.5" font-weight="700" fill="#ED7100" text-anchor="middle">Auto Scaling Group · 2 instancias (mín 1, máx 3) · instance refresh gradual · AMI vía SSM</text>
+
+  <!-- Security group app, zona a -->
+  <rect x="355" y="425" width="220" height="170" fill="none" stroke="#DD344C" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <text x="465" y="586" font-size="10.5" fill="#DD344C" text-anchor="middle">SG app · 3000 sólo desde SG alb</text>
+  <!-- EC2 zona a -->
+  <rect x="370" y="440" width="190" height="110" rx="3" fill="#FFFFFF" stroke="#ED7100" stroke-width="1.5"/>
+  <rect x="380" y="450" width="28" height="28" rx="2" fill="#ED7100"/>
+  <text x="394" y="469" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">EC2</text>
+  <text x="416" y="468" font-size="13" font-weight="700">EC2 t3.micro</text>
+  <text x="380" y="496" font-size="11" fill="#5F6B7A">Amazon Linux 2023 · IMDSv2</text>
+  <text x="380" y="512" font-size="11" fill="#5F6B7A">Node 22 · systemd · :3000</text>
+  <text x="380" y="528" font-size="11" fill="#5F6B7A">rol analizador-ia-instancia</text>
+
+  <!-- Security group app, zona b -->
+  <rect x="665" y="425" width="220" height="170" fill="none" stroke="#DD344C" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <text x="775" y="586" font-size="10.5" fill="#DD344C" text-anchor="middle">SG app · 3000 sólo desde SG alb</text>
+  <!-- EC2 zona b -->
+  <rect x="680" y="440" width="190" height="110" rx="3" fill="#FFFFFF" stroke="#ED7100" stroke-width="1.5"/>
+  <rect x="690" y="450" width="28" height="28" rx="2" fill="#ED7100"/>
+  <text x="704" y="469" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">EC2</text>
+  <text x="726" y="468" font-size="13" font-weight="700">EC2 t3.micro</text>
+  <text x="690" y="496" font-size="11" fill="#5F6B7A">Amazon Linux 2023 · IMDSv2</text>
+  <text x="690" y="512" font-size="11" fill="#5F6B7A">Node 22 · systemd · :3000</text>
+  <text x="690" y="528" font-size="11" fill="#5F6B7A">rol analizador-ia-instancia</text>
+
+  <!-- ============ Servicios fuera de la VPC (columna derecha) ============ -->
+  <!-- IAM rol de instancia -->
+  <rect x="960" y="130" width="220" height="80" rx="3" fill="#FFFFFF" stroke="#DD344C" stroke-width="1.5"/>
+  <rect x="970" y="140" width="28" height="28" rx="2" fill="#DD344C"/>
+  <text x="984" y="159" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">IAM</text>
+  <text x="1006" y="158" font-size="13" font-weight="700">Rol de instancia</text>
+  <text x="970" y="184" font-size="11" fill="#5F6B7A">AmazonSSMManagedInstanceCore</text>
+  <text x="970" y="199" font-size="11" fill="#5F6B7A">bedrock:InvokeModel</text>
+
+  <!-- S3 estado -->
+  <rect x="960" y="240" width="220" height="80" rx="3" fill="#FFFFFF" stroke="#7AA116" stroke-width="1.5"/>
+  <rect x="970" y="250" width="28" height="28" rx="2" fill="#7AA116"/>
+  <text x="984" y="269" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">S3</text>
+  <text x="1006" y="268" font-size="13" font-weight="700">Bucket tfstate</text>
+  <text x="970" y="294" font-size="11" fill="#5F6B7A">terraform.tfstate · versionado</text>
+  <text x="970" y="309" font-size="11" fill="#5F6B7A">bloqueo con use_lockfile</text>
+
+  <!-- SSM Parameter Store -->
+  <rect x="960" y="350" width="220" height="80" rx="3" fill="#FFFFFF" stroke="#E7157B" stroke-width="1.5"/>
+  <rect x="970" y="360" width="28" height="28" rx="2" fill="#E7157B"/>
+  <text x="984" y="379" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">SSM</text>
+  <text x="1006" y="378" font-size="13" font-weight="700">Parameter Store</text>
+  <text x="970" y="404" font-size="11" fill="#5F6B7A">AMI más reciente de AL2023</text>
+  <text x="970" y="419" font-size="11" fill="#5F6B7A">Session Manager sin SSH</text>
+
+  <!-- Bedrock (fase 2) -->
+  <rect x="960" y="460" width="220" height="80" rx="3" fill="#FFFFFF" stroke="#01A88D" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <rect x="970" y="470" width="28" height="28" rx="2" fill="#01A88D"/>
+  <text x="984" y="489" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">AI</text>
+  <text x="1006" y="488" font-size="13" font-weight="700">Amazon Bedrock</text>
+  <text x="970" y="514" font-size="11" fill="#5F6B7A">fase 2 · análisis de reseñas</text>
+  <text x="970" y="529" font-size="11" fill="#5F6B7A">permiso ya concedido al rol</text>
+
+  <!-- IAM rol de GitHub Actions + OIDC -->
+  <rect x="960" y="570" width="220" height="90" rx="3" fill="#FFFFFF" stroke="#DD344C" stroke-width="1.5"/>
+  <rect x="970" y="580" width="28" height="28" rx="2" fill="#DD344C"/>
+  <text x="984" y="599" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">IAM</text>
+  <text x="1006" y="598" font-size="13" font-weight="700">Rol github-actions</text>
+  <text x="970" y="624" font-size="11" fill="#5F6B7A">proveedor OIDC de GitHub</text>
+  <text x="970" y="639" font-size="11" fill="#5F6B7A">sólo repo simon1820/analizador-ia</text>
+  <text x="970" y="654" font-size="11" fill="#5F6B7A">en main y pull requests</text>
+
+  <!-- ============ Fuera de AWS ============ -->
+  <!-- Usuario -->
+  <rect x="30" y="350" width="160" height="90" rx="3" fill="#F5F6F7" stroke="#545B64" stroke-width="1.5"/>
+  <text x="110" y="385" font-size="13" font-weight="700" text-anchor="middle">Usuario</text>
+  <text x="110" y="404" font-size="11" fill="#5F6B7A" text-anchor="middle">navegador</text>
+  <text x="110" y="419" font-size="11" fill="#5F6B7A" text-anchor="middle">abre la URL del ALB</text>
+
+  <!-- Tu máquina -->
+  <rect x="1250" y="130" width="240" height="90" rx="3" fill="#F5F6F7" stroke="#545B64" stroke-width="1.5"/>
+  <text x="1262" y="155" font-size="13" font-weight="700">Tu máquina</text>
+  <text x="1262" y="175" font-size="11" fill="#5F6B7A">terraform init / plan / apply</text>
+  <text x="1262" y="190" font-size="11" fill="#5F6B7A">primer despliegue y destroy</text>
+  <text x="1262" y="205" font-size="11" fill="#5F6B7A">credenciales del perfil de AWS CLI</text>
+
+  <!-- GitHub Actions -->
+  <rect x="1250" y="540" width="240" height="110" rx="3" fill="#F5F6F7" stroke="#24292F" stroke-width="1.5"/>
+  <text x="1262" y="565" font-size="13" font-weight="700">GitHub Actions</text>
+  <text x="1262" y="585" font-size="11" fill="#5F6B7A">pull request → terraform plan</text>
+  <text x="1262" y="600" font-size="11" fill="#5F6B7A">merge a main → terraform apply</text>
+  <text x="1262" y="615" font-size="11" fill="#5F6B7A">pasa el SHA como app_version:</text>
+  <text x="1262" y="630" font-size="11" fill="#5F6B7A">nuevo launch template → rota instancias</text>
+
+  <!-- GitHub repo -->
+  <rect x="1250" y="680" width="240" height="90" rx="3" fill="#F5F6F7" stroke="#24292F" stroke-width="1.5"/>
+  <text x="1262" y="705" font-size="13" font-weight="700">GitHub · repositorio</text>
+  <text x="1262" y="725" font-size="11" fill="#5F6B7A">simon1820/analizador-ia</text>
+  <text x="1262" y="740" font-size="11" fill="#5F6B7A">src/ · public/ · infra/ · .github/</text>
+
+  <!-- ============ Flujos ============ -->
+  <!-- Usuario -> IGW -->
+  <line x1="190" y1="395" x2="258" y2="395" stroke="#232F3E" stroke-width="1.5" marker-end="url(#flecha)"/>
+  <text x="224" y="388" font-size="10.5" text-anchor="middle">HTTP :80</text>
+
+  <!-- IGW -> ALB -->
+  <polyline points="300,372 300,192 488,192" fill="none" stroke="#232F3E" stroke-width="1.5" marker-end="url(#flecha)"/>
+
+  <!-- ALB -> EC2 a -->
+  <polyline points="550,224 550,258 465,258 465,438" fill="none" stroke="#232F3E" stroke-width="1.5" marker-end="url(#flecha)"/>
+  <text x="472" y="372" font-size="10.5">reenvía :3000</text>
+  <!-- ALB -> EC2 b -->
+  <polyline points="670,224 670,258 775,258 775,438" fill="none" stroke="#232F3E" stroke-width="1.5" marker-end="url(#flecha)"/>
+  <text x="782" y="372" font-size="10.5">reenvía :3000</text>
+  <text x="610" y="252" font-size="10.5" fill="#5F6B7A" text-anchor="middle">target group</text>
+
+  <!-- Rol de instancia -> instancias (instance profile) -->
+  <polyline points="960,170 945,170 945,470 887,470" fill="none" stroke="#DD344C" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#flecha)"/>
+  <text x="938" y="330" font-size="10.5" fill="#DD344C" text-anchor="middle" transform="rotate(-90 938 330)">instance profile</text>
+
+  <!-- Instancias -> Bedrock (fase 2) -->
+  <line x1="887" y1="520" x2="958" y2="520" stroke="#01A88D" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#flecha)"/>
+  <text x="922" y="512" font-size="10.5" fill="#01A88D" text-anchor="middle">fase 2</text>
+
+  <!-- GitHub Actions -> rol OIDC -->
+  <line x1="1250" y1="610" x2="1182" y2="610" stroke="#232F3E" stroke-width="1.5" marker-end="url(#flecha)"/>
+  <text x="1216" y="602" font-size="10.5" text-anchor="middle">OIDC</text>
+
+  <!-- GitHub Actions -> S3 estado -->
+  <polyline points="1250,575 1215,575 1215,290 1182,290" fill="none" stroke="#232F3E" stroke-width="1.5" marker-end="url(#flecha)"/>
+  <text x="1208" y="435" font-size="10.5" text-anchor="middle" transform="rotate(-90 1208 435)">lee y escribe el estado</text>
+
+  <!-- Tu máquina -> S3 estado -->
+  <polyline points="1250,190 1232,190 1232,270 1182,270" fill="none" stroke="#232F3E" stroke-width="1.5" marker-end="url(#flecha)"/>
+
+  <!-- GitHub repo -> Actions (push / PR) -->
+  <line x1="1370" y1="680" x2="1370" y2="652" stroke="#232F3E" stroke-width="1.5" marker-end="url(#flecha)"/>
+  <text x="1378" y="670" font-size="10.5">push · PR</text>
+
+  <!-- Instancias -> GitHub repo (clone al arrancar) -->
+  <polyline points="775,596 775,725 1248,725" fill="none" stroke="#6B7280" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#flecha-gris)"/>
+  <text x="1010" y="718" font-size="10.5" fill="#5F6B7A" text-anchor="middle">al arrancar: git clone, pnpm build, servicio systemd</text>
+
+  <!-- ============ Leyenda ============ -->
+  <text x="30" y="835" font-size="11.5" font-weight="700">Leyenda</text>
+  <rect x="30" y="848" width="14" height="14" fill="#ED7100"/><text x="50" y="859" font-size="11">Cómputo</text>
+  <rect x="130" y="848" width="14" height="14" fill="#8C4FFF"/><text x="150" y="859" font-size="11">Red</text>
+  <rect x="210" y="848" width="14" height="14" fill="#7AA116"/><text x="230" y="859" font-size="11">Almacenamiento y subredes</text>
+  <rect x="400" y="848" width="14" height="14" fill="#DD344C"/><text x="420" y="859" font-size="11">Seguridad e IAM</text>
+  <rect x="530" y="848" width="14" height="14" fill="#E7157B"/><text x="550" y="859" font-size="11">Administración</text>
+  <rect x="650" y="848" width="14" height="14" fill="#01A88D"/><text x="670" y="859" font-size="11">IA</text>
+  <rect x="710" y="848" width="14" height="14" fill="#F5F6F7" stroke="#545B64"/><text x="730" y="859" font-size="11">Fuera de AWS</text>
+  <line x1="850" y1="855" x2="890" y2="855" stroke="#232F3E" stroke-width="1.5"/><text x="898" y="859" font-size="11">tráfico o acción</text>
+  <line x1="1010" y1="855" x2="1050" y2="855" stroke="#232F3E" stroke-width="1.2" stroke-dasharray="4 3"/><text x="1058" y="859" font-size="11">permiso o dependencia</text>
+  <rect x="1210" y="848" width="40" height="14" fill="none" stroke="#01A88D" stroke-dasharray="6 4"/><text x="1258" y="859" font-size="11">pendiente (fase 2)</text>
+
+  <text x="1490" y="885" font-size="10.5" fill="#5F6B7A" text-anchor="end">Analizador de reseñas · fase 1 · infraestructura en infra/ con Terraform</text>
+</svg>

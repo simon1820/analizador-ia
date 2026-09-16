@@ -1,0 +1,5 @@
+# Copiar a backend.hcl (ignorado por git) con el nombre real del bucket.
+bucket       = "tfstate-analizador-ia-CAMBIAR"
+key          = "analizador-ia/terraform.tfstate"
+region       = "us-east-1"
+use_lockfile = true

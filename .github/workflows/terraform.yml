@@ -1,0 +1,83 @@
+name: Terraform
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write   # necesario para OIDC con AWS
+  contents: read
+  pull-requests: write
+
+env:
+  TF_IN_AUTOMATION: "true"
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+
+defaults:
+  run:
+    working-directory: infra
+
+jobs:
+  terraform:
+    name: ${{ github.event_name == 'push' && 'apply' || 'plan' }}
+    runs-on: ubuntu-latest
+    # Serializa los applies: dos pushes seguidos no compiten por el estado.
+    concurrency:
+      group: terraform-${{ github.ref }}
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.5"
+
+      - name: Init
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="key=analizador-ia/terraform.tfstate" \
+            -backend-config="region=${{ env.AWS_REGION }}" \
+            -backend-config="use_lockfile=true"
+
+      - name: Formato
+        run: terraform fmt -check -recursive
+
+      - name: Validate
+        run: terraform validate -no-color
+
+      # El SHA del commit viaja al user-data: cada merge a main genera
+      # una versión nueva del launch template y el ASG rota las instancias.
+      - name: Plan
+        id: plan
+        run: |
+          terraform plan -input=false -no-color -out=tfplan \
+            -var="app_version=${{ github.sha }}" \
+            -var="git_ref=${{ github.sha }}"
+
+      - name: Comentar plan en el PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { execSync } = require('child_process');
+            const plan = execSync('terraform show -no-color tfplan', { cwd: 'infra' }).toString();
+            const recortado = plan.length > 60000 ? plan.slice(0, 60000) + '\n... (recortado)' : plan;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `### Terraform plan\n\n<details><summary>Ver plan</summary>\n\n\`\`\`\n${recortado}\n\`\`\`\n\n</details>`,
+            });
+
+      - name: Apply
+        if: github.event_name == 'push'
+        run: terraform apply -input=false -auto-approve tfplan
