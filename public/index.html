@@ -10,7 +10,7 @@
 <style>
   :root{
     --ink:#14171c; --paper:#faf9f5; --rule:#dfddd4; --muted:#6b6f76;
-    --signal:#1f8f6a; --alerta:#c05a24;
+    --signal:#1f8f6a; --alerta:#c05a24; --neutro:#8a8f98;
     --mono:"IBM Plex Mono",ui-monospace,monospace;
     --sans:"IBM Plex Sans",system-ui,sans-serif;
   }
@@ -29,7 +29,7 @@
   .led.caida{background:var(--alerta)}
   .placa-cab span{font-family:var(--mono);font-size:11px;letter-spacing:.14em;
                   text-transform:uppercase;color:#8f938c}
-  .rejilla{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px 20px}
+  .rejilla{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px 20px;margin:0}
   .dato dt{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
            color:#8f938c;margin:0 0 3px}
   .dato dd{font-family:var(--mono);font-size:15px;margin:0;word-break:break-all}
@@ -43,19 +43,43 @@
   button{font-family:var(--mono);font-size:13px;padding:10px 18px;border-radius:4px;cursor:pointer;
          border:1px solid var(--ink);background:var(--ink);color:var(--paper)}
   button.secundario{background:transparent;color:var(--ink)}
+  button.enlace{border:0;background:none;padding:0;color:var(--muted);text-decoration:underline;font-size:12px}
   button:disabled{opacity:.45;cursor:not-allowed}
   .error{color:var(--alerta);font-size:14px;margin:10px 0 0}
-  .salida{margin-top:20px;padding:16px;border:1px solid var(--rule);border-left:3px solid var(--ink);
-          background:#fff;font-family:var(--mono);font-size:13px;white-space:pre-wrap}
   .oculto{display:none}
   hr{border:0;border-top:1px solid var(--rule);margin:36px 0}
+
+  /* Resultado del análisis */
+  .resultado{margin-top:24px;border:1px solid var(--rule);border-radius:4px;background:#fff;overflow:hidden}
+  .resultado-cab{display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid var(--rule);
+                 flex-wrap:wrap}
+  .pastilla{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+            padding:5px 10px;border-radius:999px;color:#fff;background:var(--neutro)}
+  .pastilla.positivo{background:var(--signal)}
+  .pastilla.negativo{background:var(--alerta)}
+  .estrellas{font-family:var(--mono);font-size:15px;letter-spacing:.1em}
+  .estrellas span{color:var(--rule)}
+  .estrellas span.llena{color:var(--ink)}
+  .urgencia{margin-left:auto;font-family:var(--mono);font-size:11px;letter-spacing:.1em;
+            text-transform:uppercase;color:var(--muted)}
+  .urgencia.alta{color:var(--alerta)}
+  .resultado-cuerpo{padding:18px 20px;display:grid;gap:18px}
+  .campo h3{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+            color:var(--muted);margin:0 0 6px;font-weight:500}
+  .campo p{margin:0;font-size:15px}
+  .temas{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
+  .temas li{font-family:var(--mono);font-size:12px;padding:4px 10px;border:1px solid var(--rule);
+            border-radius:999px;background:var(--paper)}
+  .respuesta{border-left:3px solid var(--ink);padding:10px 14px;background:var(--paper);white-space:pre-wrap}
+  .pie{display:flex;gap:16px;flex-wrap:wrap;padding:12px 20px;border-top:1px solid var(--rule);
+       font-family:var(--mono);font-size:11px;color:var(--muted)}
 </style>
 </head>
 <body>
 <div class="envoltura">
-  <p class="eyebrow">Fase 1 · despliegue</p>
+  <p class="eyebrow">Fase 2 · inteligencia artificial</p>
   <h1>Analizador de reseñas</h1>
-  <p class="intro">Cada respuesta lleva la firma del servidor que la atendió. Cuando pongas el balanceador delante, recarga y observa cómo cambia.</p>
+  <p class="intro">Pega el texto de un cliente y Claude, a través de Amazon Bedrock, devuelve sentimiento, temas, urgencia y una respuesta sugerida. Cada resultado lleva la firma del servidor que lo atendió.</p>
 
   <div class="placa">
     <div class="placa-cab"><i class="led" id="led"></i><span id="estado">Consultando</span></div>
@@ -63,6 +87,7 @@
       <div class="dato"><dt>Instancia</dt><dd id="instancia">—</dd></div>
       <div class="dato"><dt>Zona</dt><dd id="zona">—</dd></div>
       <div class="dato"><dt>Tipo</dt><dd id="tipo">—</dd></div>
+      <div class="dato"><dt>Modelo</dt><dd id="modelo">—</dd></div>
     </dl>
   </div>
 
@@ -71,9 +96,27 @@
   <div class="barra">
     <button id="analizar">Analizar</button>
     <button id="refrescar" class="secundario">Refrescar identidad</button>
+    <button id="ejemplo" class="enlace" type="button">Cargar un ejemplo</button>
   </div>
   <p class="error oculto" id="error"></p>
-  <pre class="salida oculto" id="salida"></pre>
+
+  <section class="resultado oculto" id="resultado" aria-live="polite">
+    <div class="resultado-cab">
+      <span class="pastilla" id="sentimiento">neutral</span>
+      <span class="estrellas" id="estrellas" aria-label="Puntuación"></span>
+      <span class="urgencia" id="urgencia"></span>
+    </div>
+    <div class="resultado-cuerpo">
+      <div class="campo"><h3>Resumen</h3><p id="resumen"></p></div>
+      <div class="campo"><h3>Temas</h3><ul class="temas" id="temas"></ul></div>
+      <div class="campo"><h3>Respuesta sugerida</h3><p class="respuesta" id="respuesta"></p></div>
+    </div>
+    <div class="pie">
+      <span id="pie-instancia"></span>
+      <span id="pie-tiempo"></span>
+      <span id="pie-tokens"></span>
+    </div>
+  </section>
 
   <hr>
   <p class="eyebrow">Prueba de balanceo</p>
@@ -85,10 +128,13 @@
   const $ = (id) => document.getElementById(id);
   let saludable = true;
 
+  const EJEMPLO = "Compré la cafetera hace dos semanas y el primer día funcionó bien, pero desde el jueves gotea por la base y ya manchó la encimera. Escribí al chat de soporte el viernes y nadie me ha contestado. Quiero que me la cambien o me devuelvan el dinero antes de que termine el mes, porque la necesito para el negocio.";
+
   function pintarIdentidad(d) {
     $("instancia").textContent = d.instanceId;
     $("zona").textContent = d.availabilityZone;
     $("tipo").textContent = d.instanceType;
+    $("modelo").textContent = d.modelo ?? "—";
     saludable = d.saludable;
     $("led").classList.toggle("caida", !saludable);
     $("estado").textContent = saludable ? "Health check en 200" : "Health check en 503";
@@ -100,6 +146,39 @@
     $("error").classList.remove("oculto");
   }
   function limpiarError() { $("error").classList.add("oculto"); }
+
+  function pintarResultado(d) {
+    const p = $("sentimiento");
+    p.textContent = d.sentimiento;
+    p.className = `pastilla ${d.sentimiento}`;
+
+    $("estrellas").innerHTML = "";
+    for (let i = 1; i <= 5; i++) {
+      const s = document.createElement("span");
+      s.textContent = "★";
+      if (i <= d.puntuacion) s.classList.add("llena");
+      $("estrellas").appendChild(s);
+    }
+    $("estrellas").setAttribute("aria-label", `Puntuación ${d.puntuacion} de 5`);
+
+    const u = $("urgencia");
+    u.textContent = `urgencia ${d.urgencia}`;
+    u.className = `urgencia ${d.urgencia}`;
+
+    $("resumen").textContent = d.resumen;
+    $("temas").innerHTML = "";
+    for (const t of d.temas) {
+      const li = document.createElement("li");
+      li.textContent = t;
+      $("temas").appendChild(li);
+    }
+    $("respuesta").textContent = d.respuesta_sugerida;
+
+    $("pie-instancia").textContent = `atendido por ${d.atendidoPor}`;
+    $("pie-tiempo").textContent = `${(d.milisegundos / 1000).toFixed(1)} s`;
+    $("pie-tokens").textContent = `${d.tokens.entrada} tokens de entrada · ${d.tokens.salida} de salida`;
+    $("resultado").classList.remove("oculto");
+  }
 
   async function cargarIdentidad() {
     try {
@@ -123,8 +202,12 @@
         body: JSON.stringify({ texto }),
       });
       const datos = await res.json();
-      $("salida").textContent = JSON.stringify(datos, null, 2);
-      $("salida").classList.remove("oculto");
+      if (!res.ok) {
+        mostrarError(datos.error ?? `El servidor respondió ${res.status}.`);
+        $("resultado").classList.add("oculto");
+      } else {
+        pintarResultado(datos);
+      }
       cargarIdentidad();
     } catch {
       mostrarError("No se pudo contactar al servidor. Revisa que el proceso siga corriendo.");
@@ -136,6 +219,7 @@
 
   $("texto").addEventListener("input", limpiarError);
   $("refrescar").addEventListener("click", cargarIdentidad);
+  $("ejemplo").addEventListener("click", () => { $("texto").value = EJEMPLO; limpiarError(); $("texto").focus(); });
 
   $("alternar").addEventListener("click", async () => {
     await fetch("/api/salud", {

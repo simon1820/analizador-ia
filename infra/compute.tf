@@ -24,10 +24,14 @@ resource "aws_launch_template" "app" {
   }
 
   user_data = base64encode(templatefile("${path.module}/user-data.sh.tftpl", {
-    repo_url    = var.repo_url
-    git_ref     = var.git_ref
-    app_version = var.app_version
-    aws_region  = var.aws_region
+    repo_url      = var.repo_url
+    git_ref       = var.git_ref
+    app_version   = var.app_version
+    aws_region    = var.aws_region
+    ia_proveedor  = var.ia_proveedor
+    ia_modelo     = var.ia_modelo
+    api_key_param = var.anthropic_api_key_param
+    workspace_id  = var.anthropic_workspace_id
   }))
 
   tag_specifications {

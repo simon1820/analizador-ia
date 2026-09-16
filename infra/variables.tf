@@ -45,6 +45,34 @@ variable "app_version" {
   default     = "manual"
 }
 
+variable "ia_proveedor" {
+  description = "Proveedor de IA de la app: 'bedrock' (Claude en Bedrock, con el rol de la instancia) o 'anthropic' (API de Anthropic, clave en Parameter Store)."
+  type        = string
+  default     = "anthropic"
+  validation {
+    condition     = contains(["bedrock", "anthropic"], var.ia_proveedor)
+    error_message = "ia_proveedor debe ser 'bedrock' o 'anthropic'."
+  }
+}
+
+variable "ia_modelo" {
+  description = "Modelo a usar. Vacío = el predeterminado del proveedor (claude-opus-5 en Anthropic, anthropic.claude-opus-4-8 en Bedrock)."
+  type        = string
+  default     = ""
+}
+
+variable "anthropic_workspace_id" {
+  description = "Sólo si la clave de Anthropic no está ligada a un workspace: ID del workspace (wrkspc_...). Vacío si la clave ya es de un workspace."
+  type        = string
+  default     = ""
+}
+
+variable "anthropic_api_key_param" {
+  description = "Nombre del parámetro SecureString en SSM con la clave de la API de Anthropic. Se crea a mano, nunca con Terraform."
+  type        = string
+  default     = "/analizador-ia/anthropic-api-key"
+}
+
 variable "github_repo" {
   description = "Repo de GitHub (owner/nombre) autorizado a asumir el rol del pipeline vía OIDC. Vacío = no crear el rol."
   type        = string

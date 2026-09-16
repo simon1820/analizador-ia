@@ -38,6 +38,14 @@ WorkingDirectory=/opt/analizador-ia
 Environment=NODE_ENV=production
 Environment=PORT=3000
 Environment=AWS_REGION=${aws_region}
+Environment=IA_PROVEEDOR=${ia_proveedor}
+%{ if ia_modelo != "" ~}
+Environment=IA_MODELO=${ia_modelo}
+%{ endif ~}
+Environment=ANTHROPIC_API_KEY_PARAM=${api_key_param}
+%{ if workspace_id != "" ~}
+Environment=ANTHROPIC_WORKSPACE_ID=${workspace_id}
+%{ endif ~}
 ExecStart=/usr/bin/node dist/server.js
 Restart=always
 RestartSec=5
